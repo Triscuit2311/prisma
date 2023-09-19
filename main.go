@@ -2,135 +2,330 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"math"
+	"net/http"
 )
 
+func positiveMod(a, b int) int {
+	return (a%b + b) % b
+}
+
+// Contains Hue, Saturation, Lightness (float64 [0-1])
 type HSL struct {
-	H, S, L int
+	H, S, L float64
 }
 
-func (hsl *HSL) String() string {
-	return fmt.Sprintf("HSL(%d, %d%%, %d%%)", hsl.H, hsl.S, hsl.L)
-}
-
-func (hsl *HSL) HSLtoRGB() RGB {
-	// TODO: Implement
-	return RGB{0, 0, 0}
-}
-
+// Contains Hue, Saturation, Lightness (float64 [0-1])
 type HSV struct {
-	H, S, V int
+	H, S, V float64
 }
 
-func (hsl *HSV) String() string {
-	return fmt.Sprintf("HSV(%d, %d%%, %d%%)", hsl.H, hsl.S, hsl.V)
-}
-
-func (hsv *HSV) HSVtoRGB() RGB {
-	// TODO: Implement
-	return RGB{0, 0, 0}
-}
-
+// Contains Red, Green, Blue (uint8 [0-255])
 type RGB struct {
 	R, G, B uint8
 }
 
-func (rgb *RGB) RGBtoHSL() HSL {
+// Pretty format [0-360°,0-100%,0-100%]
+func (hsl *HSL) String() string {
+	return fmt.Sprintf("HSL(%d°, %d%%, %d%%)",
+		positiveMod(int(hsl.H*360), 360),
+		positiveMod(int(hsl.S*100), 100),
+		positiveMod(int(hsl.L*100), 100))
+}
+
+// Pretty format [0-360°,0-100%,0-100%]
+func (hsv *HSV) String() string {
+	return fmt.Sprintf("HSV(%d°, %d%%, %d%%)",
+		positiveMod(int(hsv.H*360), 360),
+		positiveMod(int(hsv.S*100), 100),
+		positiveMod(int(hsv.V*100), 100))
+}
+
+// Pretty format [0-255,0-255,0-255]
+func (rgb *RGB) String() string {
+	return fmt.Sprintf("RGB(%d, %d, %d)", rgb.R, rgb.G, rgb.B)
+}
+
+// RGB -> HSL
+func (rgb *RGB) ToHSL() HSL {
+
+	// Get RGB as % of max
 	nR := float64(rgb.R) / 255.0
 	nG := float64(rgb.G) / 255.0
 	nB := float64(rgb.B) / 255.0
 
 	minV := math.Min(nR, math.Min(nG, nB))
 	maxV := math.Max(nR, math.Max(nG, nB))
+	delta := maxV - minV
 
-	// Covers all 3 channels being the same (gray)
+	H, S, L := 0.0, 0.0, 0.0
+
+	// Calculate L
+	L = (maxV + minV) / 2.0
+
+	// Grayscale, B/W
 	if maxV == minV {
 		// No Hue/Sat
 		return HSL{
 			0,
 			0,
-			int((maxV + minV) * 50),
+			L,
 		}
 	}
 
-	H, S, L := 0.0, 0.0, (maxV+minV)/2
-
-	// Calculate L
+	// Calculate S
 	if L < 0.5 {
-		S = (maxV - minV) / (maxV + minV)
+		S = delta / (maxV + minV)
 	} else {
-		S = (maxV - minV) / (2.0 - maxV - minV)
+		S = delta / (2.0 - maxV - minV)
 	}
 
 	// Calculate H
-	if nR == maxV {
-		H = 60 * ((nG - nB) / (maxV - minV))
-
+	switch {
+	case rgb.R >= rgb.B && rgb.R >= rgb.G:
 		if nG < nB {
-			H += 360
+			delta += 6
 		}
-	} else if nG == maxV {
-		H = 60*((nB-nR)/(maxV-minV)) + 120
-	} else {
-		H = 60*((nR-nG)/(maxV-minV)) + 240
+		H = (nG - nB) / delta
+	case rgb.G >= rgb.R && rgb.G >= rgb.B:
+		H = (nB-nR)/delta + 2
+	default:
+		H = (nR-nG)/delta + 4
 	}
 
-	if H < 0 {
-		H += 360
-	}
+	H /= 6
 
-	return HSL{int(H), int(S * 100), int(L * 100)}
+	return HSL{H, S, L}
 }
 
-func (rgb *RGB) RGBtoHSV() HSV {
+// RGB -> HSV
+func (rgb *RGB) ToHSV() HSV {
 
+	// Get RGB as % of max
 	nR := float64(rgb.R) / 255.0
 	nG := float64(rgb.G) / 255.0
 	nB := float64(rgb.B) / 255.0
 
 	minV := math.Min(nR, math.Min(nG, nB))
 	maxV := math.Max(nR, math.Max(nG, nB))
+	delta := maxV - minV
 
-	// V is MaxVal normalized
-	H, S, V := 0.0, 0.0, maxV
+	H, S, V := maxV, maxV, maxV
 
-	// Calculate S
-	if maxV != 0.0 {
-		S = (maxV - minV) / maxV
-	}
-
-	// Calculate H
-	if nR == maxV {
-		H = 60 * ((nG - nB) / (maxV - minV))
-
-		if nG < nB {
-			H += 360
-		}
-	} else if nG == maxV {
-		H = 60*((nB-nR)/(maxV-minV)) + 120
+	if maxV == 0.0 {
+		S = 0
 	} else {
-		H = 60*((nR-nG)/(maxV-minV)) + 240
+		S = delta / maxV
 	}
 
-	if H < 0 {
-		H += 360
+	if maxV == minV {
+		H = 0
+	} else {
+		switch {
+		case rgb.R >= rgb.B && rgb.R >= rgb.G:
+			if nG < nB {
+				delta += 6
+			}
+			H = (nG - nB) / delta
+		case rgb.G >= rgb.R && rgb.G >= rgb.B:
+			H = (nB-nR)/delta + 2
+		default:
+			H = (nR-nG)/delta + 4
+		}
+		H /= 6
 	}
-
-	return HSV{int(H), int(S * 100), int(V * 100)}
+	return HSV{H, S, V}
 }
 
-func (rgb *RGB) RGBtoHEXSTR() string {
-	return fmt.Sprintf("#%x%x%x", rgb.R, rgb.G, rgb.B)
+// RGB -> HEX
+func (rgb RGB) AsHEXSTR() string {
+	return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
+}
+func (rgb RGB) AsArray() [3]uint8 {
+	return [3]uint8{rgb.R, rgb.G, rgb.B}
+}
+func RGBfromArray(arr [3]uint8) RGB {
+	return RGB{arr[0], arr[1], arr[2]}
+}
+
+// HSL -> RGB
+func (hsl *HSL) ToRGB() RGB {
+
+	const (
+		one_sixth  float64 = 1.0 / 6.0
+		one_half   float64 = 1.0 / 2.0
+		two_thirds float64 = 2.0 / 3.0
+		one_third  float64 = 1.0 / 3.0
+	)
+
+	var hueToRGB = func(lightness, chroma, hue float64) float64 {
+		if hue < 0 {
+			hue += 1
+		}
+		if hue > 1 {
+			hue -= 1
+		}
+		if hue < one_sixth {
+			return lightness + (chroma-lightness)*6.0*hue
+		}
+		if hue < one_half {
+			return chroma
+		}
+		if hue < two_thirds {
+			return lightness + (chroma-lightness)*(two_thirds-hue)*6.0
+		}
+		return lightness
+	}
+
+	// Grayscale, B/W
+	if hsl.S == 0 {
+		lightness := uint8(hsl.L * 255.0)
+		return RGB{lightness, lightness, lightness}
+	}
+
+	chroma := 0.0
+
+	if hsl.L < 0.5 {
+		chroma = hsl.L * (1 + hsl.S)
+	} else {
+		chroma = hsl.L + hsl.S - hsl.L*hsl.S
+	}
+	lightness := 2*hsl.L - chroma
+
+	r := hueToRGB(lightness, chroma, hsl.H+one_third)
+	g := hueToRGB(lightness, chroma, hsl.H)
+	b := hueToRGB(lightness, chroma, hsl.H-one_third)
+
+	return RGB{uint8(r * 255), uint8(g * 255), uint8(b * 255)}
+}
+
+// HSV -> RGB
+func (hsv *HSV) ToRGB() RGB {
+
+	R, G, B := 0.0, 0.0, 0.0
+
+	sectorNum := math.Floor(hsv.H * 6.0)
+	fractionalSector := hsv.H*6.0 - sectorNum
+	decSaturation := hsv.V * (1.0 - hsv.S)
+	partialDec := hsv.V * (1.0 - fractionalSector*hsv.S)
+	largeDec := hsv.V * (1.0 - (1.0-fractionalSector)*hsv.S)
+
+	switch int(sectorNum) % 6 {
+	case 0:
+		R, G, B = hsv.V, largeDec, decSaturation
+	case 1:
+		R, G, B = partialDec, hsv.V, decSaturation
+	case 2:
+		R, G, B = decSaturation, hsv.V, largeDec
+	case 3:
+		R, G, B = decSaturation, partialDec, hsv.V
+	case 4:
+		R, G, B = largeDec, decSaturation, hsv.V
+	case 5:
+		R, G, B = hsv.V, decSaturation, partialDec
+
+	}
+
+	return RGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
+}
+
+type displayColor struct {
+	Color       RGB
+	Description string
+	Hex         string
+}
+
+type displayColorGroup struct {
+	Colors     []displayColor
+	GroupTitle string
 }
 
 func main() {
 
-	c := RGB{200, 33, 217}
+	baseColor := RGB{200, 33, 217}
 
-	hsl := c.RGBtoHSL()
-	hsv := c.RGBtoHSV()
+	triads := getHarmonics(baseColor.ToHSL(), 3)
+	tetrads := getHarmonics(baseColor.ToHSL(), 4)
 
-	fmt.Println(hsl)
-	fmt.Println(hsv)
-	fmt.Println(c.RGBtoHEXSTR())
+	harmonics := getHarmonics(baseColor.ToHSL(), 8)
+
+	allColorGroups := []displayColorGroup{
+		makeColorGroup([]HSL{baseColor.ToHSL()}, "Base Color", "Base "),
+		makeColorGroup(triads, "Triads - 3 colors evenly distributed", "Triad"),
+		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
+		makeColorGroup(harmonics, "Harmonic Set - 8 Steps", "8th_Harmonics"),
+	}
+
+	tmpl := template.Must(template.ParseFiles("layout.html"))
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data := struct {
+			PageTitle   string
+			ColorGroups []displayColorGroup
+		}{
+			PageTitle:   "Your Page Title",
+			ColorGroups: allColorGroups,
+		}
+		tmpl.Execute(w, data)
+	})
+	http.ListenAndServe(":9000", nil)
+}
+
+func colorEffectsTests(rgb RGB) {
+
+	hsl := rgb.ToHSL()
+	hsl.L += 0.2 //lighten
+	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
+
+	hsl = rgb.ToHSL()
+	hsl.L -= 0.2 //darken
+	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
+
+	hsl = rgb.ToHSL()
+	hsl.S += 0.2 //saturate
+	fmt.Println("Saturated 20%: ", hsl.ToRGB().AsHEXSTR())
+
+	hsl = rgb.ToHSL()
+	hsl.S -= 0.2 //desaturate
+	fmt.Println("Desaturated 20%: ", hsl.ToRGB().AsHEXSTR())
+}
+
+func getHarmonics(hsl HSL, count int) []HSL {
+
+	harmonics := []HSL{hsl}
+
+	percentInc := 1.0 / float64(count)
+
+	for i := 1; i < count; i++ {
+		col := hsl
+		col.H = math.Mod(col.H+(percentInc*float64(i)), 1.0)
+		harmonics = append(harmonics, col)
+	}
+	return harmonics
+}
+
+//func getAnalogous()
+
+func makeColorGroup(colSlice []HSL, groupTitle string, individualIdentifier string) displayColorGroup {
+	colors := []displayColor{}
+
+	for i, hsl := range colSlice {
+		rgb := hsl.ToRGB()
+		hsv := rgb.ToHSV()
+		colors = append(colors,
+			displayColor{
+				rgb,
+				fmt.Sprintf("%s[%d] | %s | %s | %s\n",
+					individualIdentifier, i,
+					rgb.String(), hsl.String(), hsv.String()),
+				rgb.AsHEXSTR(),
+			},
+		)
+	}
+
+	return displayColorGroup{
+		Colors:     colors,
+		GroupTitle: groupTitle,
+	}
 }

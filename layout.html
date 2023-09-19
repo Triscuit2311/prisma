@@ -1,0 +1,15 @@
+<h1>Colors</h1>
+<ul style="list-style-type: none;">
+    {{range .ColorGroups}}
+    <h2>{{.GroupTitle}}</h2>
+    <ul style="list-style-type: none;">
+        {{range .Colors}}
+        <li style="margin-bottom: 5px; padding: 5px; display: flex; align-items: center;">
+            <span class="color-code">[{{.Hex}}]</span>
+            <span class="color-box" style="display: inline-block; width: 60px; height: 30px; background-color: {{.Hex}}; margin-left: 10px; margin-right: 10px; border-radius: 5px;"></span>
+            <span class="color-description">{{.Description}}</span>
+        </li>
+        {{end}}
+    </ul>
+    {{end}}
+</ul>
