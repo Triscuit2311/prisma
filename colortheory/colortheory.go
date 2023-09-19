@@ -227,3 +227,42 @@ func (hsv *HSV) ToRGB() RGB {
 
 	return RGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
 }
+
+func clampFloat(v, min, max float64) float64 {
+	return math.Min(math.Max((v), min), max)
+}
+
+func (hsl *HSL) Lighten(percent int) {
+	hsl.L = clampFloat(hsl.L+(0.01*float64(percent)), 0.0, 1.0)
+}
+
+func (hsl *HSL) Darken(percent int) {
+	hsl.L = clampFloat(hsl.L-(0.01*float64(percent)), 0.0, 1.0)
+}
+
+func (hsl *HSL) Saturate(percent int) {
+	hsl.S = clampFloat(hsl.S+(0.01*float64(percent)), 0.0, 1.0)
+}
+
+func (hsl *HSL) Desaturate(percent int) {
+	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
+}
+
+// func colorEffectsTests(rgb ct.RGB) {
+
+// 	hsl := rgb.ToHSL()
+// 	hsl.L += 0.2 //lighten
+// 	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
+
+// 	hsl = rgb.ToHSL()
+// 	hsl.L -= 0.2 //darken
+// 	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
+
+// 	hsl = rgb.ToHSL()
+// 	hsl.S += 0.2 //saturate
+// 	fmt.Println("Saturated 20%: ", hsl.ToRGB().AsHEXSTR())
+
+// 	hsl = rgb.ToHSL()
+// 	hsl.S -= 0.2 //desaturate
+// 	fmt.Println("Desaturated 20%: ", hsl.ToRGB().AsHEXSTR())
+// }
