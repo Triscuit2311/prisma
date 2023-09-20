@@ -5,6 +5,21 @@ import (
 	"math"
 )
 
+// Math Exts
+func clampFloat(v, min, max float64) float64 {
+	return math.Min(math.Max((v), min), max)
+}
+func positiveMod(a, b int) int {
+	return (a%b + b) % b
+}
+
+const (
+	one_sixth  float64 = 1.0 / 6.0
+	one_half   float64 = 1.0 / 2.0
+	two_thirds float64 = 2.0 / 3.0
+	one_third  float64 = 1.0 / 3.0
+)
+
 // Contains Hue, Saturation, Lightness (float64 [0-1])
 type HSL struct {
 	H, S, L float64
@@ -18,10 +33,6 @@ type HSV struct {
 // Contains Red, Green, Blue (uint8 [0-255])
 type RGB struct {
 	R, G, B uint8
-}
-
-func positiveMod(a, b int) int {
-	return (a%b + b) % b
 }
 
 // Pretty format [0-360°,0-100%,0-100%]
@@ -150,13 +161,6 @@ func RGBfromArray(arr [3]uint8) RGB {
 // HSL -> RGB
 func (hsl *HSL) ToRGB() RGB {
 
-	const (
-		one_sixth  float64 = 1.0 / 6.0
-		one_half   float64 = 1.0 / 2.0
-		two_thirds float64 = 2.0 / 3.0
-		one_third  float64 = 1.0 / 3.0
-	)
-
 	var hueToRGB = func(lightness, chroma, hue float64) float64 {
 		if hue < 0 {
 			hue += 1
@@ -228,10 +232,6 @@ func (hsv *HSV) ToRGB() RGB {
 	return RGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
 }
 
-func clampFloat(v, min, max float64) float64 {
-	return math.Min(math.Max((v), min), max)
-}
-
 func (hsl *HSL) Lighten(percent int) {
 	hsl.L = clampFloat(hsl.L+(0.01*float64(percent)), 0.0, 1.0)
 }
@@ -247,22 +247,3 @@ func (hsl *HSL) Saturate(percent int) {
 func (hsl *HSL) Desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
 }
-
-// func colorEffectsTests(rgb ct.RGB) {
-
-// 	hsl := rgb.ToHSL()
-// 	hsl.L += 0.2 //lighten
-// 	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
-
-// 	hsl = rgb.ToHSL()
-// 	hsl.L -= 0.2 //darken
-// 	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
-
-// 	hsl = rgb.ToHSL()
-// 	hsl.S += 0.2 //saturate
-// 	fmt.Println("Saturated 20%: ", hsl.ToRGB().AsHEXSTR())
-
-// 	hsl = rgb.ToHSL()
-// 	hsl.S -= 0.2 //desaturate
-// 	fmt.Println("Desaturated 20%: ", hsl.ToRGB().AsHEXSTR())
-// }

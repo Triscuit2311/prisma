@@ -1,0 +1,34 @@
+
+body {
+    font-family: monospace;
+    margin: 0;
+    padding: 20px;
+}
+h1, h2 {
+    margin-top: 0;
+}
+.color-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.color-card {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 5px;
+    width: 160px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.color-box {
+    width: 60px;
+    height: 30px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+.color-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}

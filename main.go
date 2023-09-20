@@ -9,9 +9,12 @@ import (
 )
 
 type displayColor struct {
-	Color       ct.RGB
+	Color       ct.HSL
 	Description string
-	Hex         string
+	HexStr      string
+	HslStr      string
+	HsvStr      string
+	RgbStr      string
 }
 
 type displayColorGroup struct {
@@ -27,12 +30,14 @@ func main() {
 	tetrads := getHarmonics(baseColor.ToHSL(), 4)
 
 	harmonics := getHarmonics(baseColor.ToHSL(), 8)
+	analogous := getAnalogous(baseColor.ToHSL(), 9, 100)
 
 	allColorGroups := []displayColorGroup{
 		makeColorGroup([]ct.HSL{baseColor.ToHSL()}, "Base Color", "Base "),
 		makeColorGroup(triads, "Triads - 3 colors evenly distributed", "Triad"),
 		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
 		makeColorGroup(harmonics, "Harmonic Set - 8 Steps", "8th_Harmonics"),
+		makeColorGroup(analogous, "Analogous Set - 20 Degrees 8 shades", "8th_20_analogous"),
 	}
 
 	tmpl := template.Must(template.ParseFiles("layout.html"))
@@ -50,25 +55,6 @@ func main() {
 	http.ListenAndServe(":9000", nil)
 }
 
-func colorEffectsTests(rgb ct.RGB) {
-
-	hsl := rgb.ToHSL()
-	hsl.L += 0.2 //lighten
-	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
-
-	hsl = rgb.ToHSL()
-	hsl.L -= 0.2 //darken
-	fmt.Println("Lightened 20%: ", hsl.ToRGB().AsHEXSTR())
-
-	hsl = rgb.ToHSL()
-	hsl.S += 0.2 //saturate
-	fmt.Println("Saturated 20%: ", hsl.ToRGB().AsHEXSTR())
-
-	hsl = rgb.ToHSL()
-	hsl.S -= 0.2 //desaturate
-	fmt.Println("Desaturated 20%: ", hsl.ToRGB().AsHEXSTR())
-}
-
 func getHarmonics(hsl ct.HSL, count int) []ct.HSL {
 
 	harmonics := []ct.HSL{hsl}
@@ -83,21 +69,43 @@ func getHarmonics(hsl ct.HSL, count int) []ct.HSL {
 	return harmonics
 }
 
-//func getAnalogous()
+func getAnalogous(hsl ct.HSL, count, degreesSpread int) []ct.HSL {
+	analogous := []ct.HSL{}
+
+	percentInc := (float64(degreesSpread) / float64(count)) / 360.0
+
+	start := hsl.H - (percentInc * (float64(count) / 2.0))
+
+	fmt.Println("PercentInc:", percentInc)
+
+	for i := 0; i < count; i++ {
+		fmt.Println("Generating:", i, " -> H:", math.Mod(start+(percentInc*float64(i)), 1.0))
+		col := ct.HSL{
+			H: math.Mod(start+(percentInc*float64(i)), 1.0),
+			S: hsl.S,
+			L: hsl.L,
+		}
+		analogous = append(analogous, col)
+	}
+	return analogous
+}
 
 func makeColorGroup(colSlice []ct.HSL, groupTitle string, individualIdentifier string) displayColorGroup {
 	colors := []displayColor{}
 
 	for i, hsl := range colSlice {
+
 		rgb := hsl.ToRGB()
 		hsv := rgb.ToHSV()
+
 		colors = append(colors,
 			displayColor{
-				rgb,
-				fmt.Sprintf("%s[%d] | %s | %s | %s\n",
-					individualIdentifier, i,
-					rgb.String(), hsl.String(), hsv.String()),
-				rgb.AsHEXSTR(),
+				Color:       hsl,
+				Description: fmt.Sprintf("%s[%d]", individualIdentifier, i),
+				HexStr:      rgb.AsHEXSTR(),
+				HsvStr:      hsv.String(),
+				HslStr:      hsl.String(),
+				RgbStr:      rgb.String(),
 			},
 		)
 	}
