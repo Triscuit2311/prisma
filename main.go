@@ -42,6 +42,7 @@ func main() {
 
 	tmpl := template.Must(template.ParseFiles("layout.html"))
 
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		data := struct {
 			PageTitle   string
@@ -76,10 +77,7 @@ func getAnalogous(hsl ct.HSL, count, degreesSpread int) []ct.HSL {
 
 	start := hsl.H - (percentInc * (float64(count) / 2.0))
 
-	fmt.Println("PercentInc:", percentInc)
-
 	for i := 0; i < count; i++ {
-		fmt.Println("Generating:", i, " -> H:", math.Mod(start+(percentInc*float64(i)), 1.0))
 		col := ct.HSL{
 			H: math.Mod(start+(percentInc*float64(i)), 1.0),
 			S: hsl.S,

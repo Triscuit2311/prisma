@@ -4,41 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prisma</title>
-    <style>
-        body {
-            font-family: monospace;
-            margin: 0;
-            padding: 20px;
-        }
-        h1, h2 {
-            margin-top: 0;
-        }
-        .color-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .color-card {
-            border: 1px solid #ccc;
-            padding: 15px;
-            border-radius: 5px;
-            width: 160px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .color-box {
-            width: 60px;
-            height: 30px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .color-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-        }
-    </style>
+    <link rel='stylesheet' type='text/css' href='/static/style.css'>
 </head>
 <body>
 <div>
@@ -48,33 +14,62 @@
         <h2>{{.GroupTitle}}</h2>
         <div class="color-group">
             {{range .Colors}}
-            <div class="color-card">
-                <div class="color-box" style="background-color: {{.HexStr}};"></div>
-                <div class="color-info">
-                    <span>{{.Description}}</span>
-                    <span>[{{.HexStr}}]</span>
-                    <span>{{.HslStr}}</span>
-                    <span>{{.HsvStr}}</span>
-                    <span>{{.RgbStr}}</span>
+
+                <div class="color-card" data-color="{{.HexStr}}">
+                    <div class="color-box" style="background-color: {{.HexStr}};"></div>
+                    <div class="color-info">
+                        <!-- <span>{{.Description}}</span> -->
+                        <span class="hex-value">[{{.HexStr}}]</span>
+                        <span>{{.HslStr}}</span>
+                        <span>{{.HsvStr}}</span>
+                        <span>{{.RgbStr}}</span>
+                    </div>
                 </div>
-            </div>
+
             {{end}} <!-- End Colors-->
         </div>
         {{end}} <!--End ColorGroups-->
     </div>
 </div>
+<div id="toast" class="toast">Copied to Clipboard!</div>
+<script>
+
+function showCopyToast() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2000); // The toast will be visible for 2 seconds
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const cards = document.querySelectorAll('.color-card');
+
+    cards.forEach(card => {
+        card.addEventListener('click', function() {
+            const color = this.getAttribute('data-color');
+            copyToClipboard(color);
+
+            // Trigger animation (by adding a class and then removing it)
+            this.classList.add('copied');
+            setTimeout(() => {
+                this.classList.remove('copied');
+            }, 1000); // Animation duration (in ms)
+
+            showCopyToast();
+        });
+    });
+});
+
+function copyToClipboard(text) {
+    const textarea = document.createElement('textarea');
+    textarea.textContent = text;
+    document.body.append(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+}
+</script>
 </body>
 </html>
-
-<!-- 
-
-		colors = append(colors,
-			displayColor{
-				Color:       hsl,
-				Description: fmt.Sprintf("%s[%d]", individualIdentifier, i),
-				HexStr:      rgb.AsHEXSTR(),
-				HsvStr:      hsv.String(),
-				HslStr:      hsl.String(),
-			},
-		)
- -->
