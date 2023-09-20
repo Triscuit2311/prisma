@@ -29,15 +29,15 @@ func main() {
 	triads := getHarmonics(baseColor.ToHSL(), 3)
 	tetrads := getHarmonics(baseColor.ToHSL(), 4)
 
-	harmonics := getHarmonics(baseColor.ToHSL(), 8)
-	analogous := getAnalogous(baseColor.ToHSL(), 9, 100)
+	harmonics := getHarmonics(baseColor.ToHSL(), 9)
+	analogous := getAnalogous(baseColor.ToHSL(), 9, 50)
 
 	allColorGroups := []displayColorGroup{
 		makeColorGroup([]ct.HSL{baseColor.ToHSL()}, "Base Color", "Base "),
 		makeColorGroup(triads, "Triads - 3 colors evenly distributed", "Triad"),
 		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
-		makeColorGroup(harmonics, "Harmonic Set - 8 Steps", "8th_Harmonics"),
-		makeColorGroup(analogous, "Analogous Set - 20 Degrees 8 shades", "8th_20_analogous"),
+		makeColorGroup(harmonics, "Harmonic Set - 9 Steps", "9th_Harmonics"),
+		makeColorGroup(analogous, "Analogous Set - 50 Degrees 9 shades", "9th_50_analogous"),
 	}
 
 	tmpl := template.Must(template.ParseFiles("layout.html"))
@@ -45,10 +45,8 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		data := struct {
-			PageTitle   string
 			ColorGroups []displayColorGroup
 		}{
-			PageTitle:   "Your Page Title",
 			ColorGroups: allColorGroups,
 		}
 		tmpl.Execute(w, data)
