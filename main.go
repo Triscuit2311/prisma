@@ -24,7 +24,7 @@ type displayColorGroup struct {
 
 func main() {
 
-	baseColor := ct.RGB{200, 33, 217}
+	baseColor := ct.RGB{R: 200, G: 33, B: 217}
 
 	triads := getHarmonics(baseColor.ToHSL(), 3)
 	tetrads := getHarmonics(baseColor.ToHSL(), 4)
