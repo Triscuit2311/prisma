@@ -22,6 +22,10 @@ type displayColorGroup struct {
 	GroupTitle string
 }
 
+func clampRGBColVal(v int) uint8 {
+	return uint8(min(max((v), 0), 255))
+}
+
 func main() {
 
 	baseColor := ct.RGB{R: 200, G: 33, B: 217}
@@ -38,6 +42,7 @@ func main() {
 		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
 		makeColorGroup(harmonics, "Harmonic Set - 9 Steps", "9th_Harmonics"),
 		makeColorGroup(analogous, "Analogous Set - 50 Degrees 9 shades", "9th_50_analogous"),
+		makeColorGroup(getMonochromatic(baseColor.ToHSL(), 10, 180), "MonoChromatic Test 1 uniform sat/light", "mono1"),
 	}
 
 	tmpl := template.Must(template.ParseFiles("layout.html"))
@@ -52,6 +57,8 @@ func main() {
 		tmpl.Execute(w, data)
 	})
 	http.ListenAndServe(":9000", nil)
+	fmt.Println("http://localhost:9000/")
+
 }
 
 func getHarmonics(hsl ct.HSL, count int) []ct.HSL {
@@ -84,6 +91,25 @@ func getAnalogous(hsl ct.HSL, count, degreesSpread int) []ct.HSL {
 		analogous = append(analogous, col)
 	}
 	return analogous
+}
+
+// Hue stays the same, saturation and lightness spread
+func getMonochromatic(hsl ct.HSL, count, rangePercent int) []ct.HSL {
+	colors := []ct.HSL{}
+	rgb := hsl.ToRGB()
+
+	scaledRange := int(float64(rangePercent) / 100.0 * 255.0)
+
+	for i := 0 - (count / 2); i < count/2; i++ {
+		col := ct.RGB{
+			R: clampRGBColVal(int(rgb.R) + int(i*(scaledRange/count))),
+			G: clampRGBColVal(int(rgb.G) + int(i*(scaledRange/count))),
+			B: clampRGBColVal(int(rgb.B) + int(i*(scaledRange/count))),
+		}
+		colors = append(colors, col.ToHSL())
+	}
+
+	return colors
 }
 
 func makeColorGroup(colSlice []ct.HSL, groupTitle string, individualIdentifier string) displayColorGroup {
