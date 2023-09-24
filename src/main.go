@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"math"
 	"net/http"
 	ct "prisma/colortheory"
 )
@@ -22,19 +21,18 @@ type displayColorGroup struct {
 	GroupTitle string
 }
 
-func clampRGBColVal(v int) uint8 {
-	return uint8(min(max((v), 0), 255))
-}
-
 func main() {
 
 	baseColor := ct.RGB{R: 200, G: 33, B: 217}
 
-	triads := getHarmonics(baseColor.ToHSL(), 3)
-	tetrads := getHarmonics(baseColor.ToHSL(), 4)
+	triads := ct.GetHarmonics(baseColor.ToHSL(), 3)
+	tetrads := ct.GetHarmonics(baseColor.ToHSL(), 4)
 
-	harmonics := getHarmonics(baseColor.ToHSL(), 9)
-	analogous := getAnalogous(baseColor.ToHSL(), 9, 50)
+	harmonics := ct.GetHarmonics(baseColor.ToHSL(), 9)
+
+	analogous := ct.GetAnalogous(baseColor.ToHSL(), 9, 50)
+
+	monochromatics := ct.GetMonochromatic(baseColor.ToHSL(), 20, 180)
 
 	allColorGroups := []displayColorGroup{
 		makeColorGroup([]ct.HSL{baseColor.ToHSL()}, "Base Color", "Base "),
@@ -42,7 +40,7 @@ func main() {
 		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
 		makeColorGroup(harmonics, "Harmonic Set - 9 Steps", "9th_Harmonics"),
 		makeColorGroup(analogous, "Analogous Set - 50 Degrees 9 shades", "9th_50_analogous"),
-		makeColorGroup(getMonochromatic(baseColor.ToHSL(), 10, 180), "MonoChromatic Test 1 uniform sat/light", "mono1"),
+		makeColorGroup(monochromatics, "Monochromatic", "monochrome"),
 	}
 
 	tmpl := template.Must(template.ParseFiles("layout.html"))
@@ -56,60 +54,9 @@ func main() {
 		}
 		tmpl.Execute(w, data)
 	})
+	fmt.Println("Serving at: http://localhost:9000/")
 	http.ListenAndServe(":9000", nil)
-	fmt.Println("http://localhost:9000/")
 
-}
-
-func getHarmonics(hsl ct.HSL, count int) []ct.HSL {
-
-	harmonics := []ct.HSL{hsl}
-
-	percentInc := 1.0 / float64(count)
-
-	for i := 1; i < count; i++ {
-		col := hsl
-		col.H = math.Mod(col.H+(percentInc*float64(i)), 1.0)
-		harmonics = append(harmonics, col)
-	}
-	return harmonics
-}
-
-func getAnalogous(hsl ct.HSL, count, degreesSpread int) []ct.HSL {
-	analogous := []ct.HSL{}
-
-	percentInc := (float64(degreesSpread) / float64(count)) / 360.0
-
-	start := hsl.H - (percentInc * (float64(count) / 2.0))
-
-	for i := 0; i < count; i++ {
-		col := ct.HSL{
-			H: math.Mod(start+(percentInc*float64(i)), 1.0),
-			S: hsl.S,
-			L: hsl.L,
-		}
-		analogous = append(analogous, col)
-	}
-	return analogous
-}
-
-// Hue stays the same, saturation and lightness spread
-func getMonochromatic(hsl ct.HSL, count, rangePercent int) []ct.HSL {
-	colors := []ct.HSL{}
-	rgb := hsl.ToRGB()
-
-	scaledRange := int(float64(rangePercent) / 100.0 * 255.0)
-
-	for i := 0 - (count / 2); i < count/2; i++ {
-		col := ct.RGB{
-			R: clampRGBColVal(int(rgb.R) + int(i*(scaledRange/count))),
-			G: clampRGBColVal(int(rgb.G) + int(i*(scaledRange/count))),
-			B: clampRGBColVal(int(rgb.B) + int(i*(scaledRange/count))),
-		}
-		colors = append(colors, col.ToHSL())
-	}
-
-	return colors
 }
 
 func makeColorGroup(colSlice []ct.HSL, groupTitle string, individualIdentifier string) displayColorGroup {

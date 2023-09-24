@@ -9,6 +9,9 @@ import (
 func clampFloat(v, min, max float64) float64 {
 	return math.Min(math.Max((v), min), max)
 }
+func clampRGBColVal(v int) uint8 {
+	return uint8(min(max((v), 0), 255))
+}
 func positiveMod(a, b int) int {
 	return (a%b + b) % b
 }
@@ -246,4 +249,55 @@ func (hsl *HSL) Saturate(percent int) {
 
 func (hsl *HSL) Desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
+}
+
+func GetHarmonics(hsl HSL, count int) []HSL {
+
+	harmonics := []HSL{hsl}
+
+	percentInc := 1.0 / float64(count)
+
+	for i := 1; i < count; i++ {
+		col := hsl
+		col.H = math.Mod(col.H+(percentInc*float64(i)), 1.0)
+		harmonics = append(harmonics, col)
+	}
+	return harmonics
+}
+
+func GetAnalogous(hsl HSL, count, degreesSpread int) []HSL {
+	analogous := []HSL{}
+
+	percentInc := (float64(degreesSpread) / float64(count)) / 360.0
+
+	start := hsl.H - (percentInc * (float64(count) / 2.0))
+
+	for i := 0; i < count; i++ {
+		col := HSL{
+			H: math.Mod(start+(percentInc*float64(i)), 1.0),
+			S: hsl.S,
+			L: hsl.L,
+		}
+		analogous = append(analogous, col)
+	}
+	return analogous
+}
+
+// Hue stays the same, saturation and lightness spread
+func GetMonochromatic(hsl HSL, count, rangePercent int) []HSL {
+	colors := []HSL{}
+	rgb := hsl.ToRGB()
+
+	scaledRange := int(float64(rangePercent) / 100.0 * 255.0)
+
+	for i := 0 - (count / 2); i < count/2; i++ {
+		col := RGB{
+			R: clampRGBColVal(int(rgb.R) + int(i*(scaledRange/count))),
+			G: clampRGBColVal(int(rgb.G) + int(i*(scaledRange/count))),
+			B: clampRGBColVal(int(rgb.B) + int(i*(scaledRange/count))),
+		}
+		colors = append(colors, col.ToHSL())
+	}
+
+	return colors
 }
