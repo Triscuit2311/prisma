@@ -7,25 +7,12 @@ import (
 	ct "prisma/colortheory"
 )
 
-type displayColor struct {
-	Color       ct.HSL
-	Description string
-	HexStr      string
-	HslStr      string
-	HsvStr      string
-	RgbStr      string
-}
-
-type displayColorGroup struct {
-	Colors     []displayColor
-	GroupTitle string
-}
-
 func main() {
 
 	baseColor := ct.RGB{R: 200, G: 33, B: 217}
 
 	triads := ct.GetHarmonics(baseColor.ToHSL(), 3)
+
 	tetrads := ct.GetHarmonics(baseColor.ToHSL(), 4)
 
 	harmonics := ct.GetHarmonics(baseColor.ToHSL(), 9)
@@ -57,6 +44,20 @@ func main() {
 	fmt.Println("Serving at: http://localhost:9000/")
 	http.ListenAndServe(":9000", nil)
 
+}
+
+type displayColor struct {
+	Color       ct.HSL
+	Description string
+	HexStr      string
+	HslStr      string
+	HsvStr      string
+	RgbStr      string
+}
+
+type displayColorGroup struct {
+	Colors     []displayColor
+	GroupTitle string
 }
 
 func makeColorGroup(colSlice []ct.HSL, groupTitle string, individualIdentifier string) displayColorGroup {
