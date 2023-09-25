@@ -334,9 +334,27 @@ func totalDeviance(a *cRGB, b *cRGB) float64 {
 }
 
 // GetClosestColor finds the closest color from a list to the given color.
-func GetClosestColor(col *ColorProfile, list []ColorProfile) {
+func GetClosestColor(col *ColorProfile, list []ColorProfile) ColorProfile {
 
+	if len(list) == 0 {
+		return *col
+	}
+
+	minIdx := 0
+	lowestDiff := 1.1
+
+	for i, v := range list {
+		if diff := totalDeviance(&col.RGB, &v.RGB); diff < float64(lowestDiff) {
+			lowestDiff = diff
+			minIdx = i
+		}
+	}
+	return list[minIdx]
 }
+
+// TODO: Closest to Standard deviation
+
+// TODO: Clostest to SD w/ specific colors ?? maybe idk
 
 // GetHarmonics generates harmonic colors from a base color.
 func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
