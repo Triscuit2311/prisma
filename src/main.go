@@ -7,22 +7,47 @@ import (
 	ct "prisma/colortheory"
 )
 
+// func main() {
+// 	col := ct.NewColorProfileFromRGB(200, 17, 187)
+
+// 	fmt.Println(col.RGB.String())
+// }
+
 func main() {
 
-	baseColor := ct.RGB{R: 200, G: 33, B: 217}
+	// ubuntuColors := terminalPalette{
+	// 	Black:        ct.RGB{R: 0, G: 0, B: 0},
+	// 	LightRed:     ct.RGB{R: 187, G: 0, B: 0},
+	// 	LightGreen:   ct.RGB{R: 0, G: 187, B: 0},
+	// 	Yellow:       ct.RGB{R: 187, G: 187, B: 0},
+	// 	LightBlue:    ct.RGB{R: 0, G: 0, B: 187},
+	// 	LightMagenta: ct.RGB{R: 187, G: 0, B: 187},
+	// 	LightCyan:    ct.RGB{R: 0, G: 187, B: 187},
+	// 	HighWhite:    ct.RGB{R: 187, G: 187, B: 187},
+	// 	Grey:         ct.RGB{R: 85, G: 85, B: 85},
+	// 	Red:          ct.RGB{R: 255, G: 85, B: 85},
+	// 	Green:        ct.RGB{R: 85, G: 255, B: 85},
+	// 	Brown:        ct.RGB{R: 255, G: 255, B: 85},
+	// 	Blue:         ct.RGB{R: 85, G: 85, B: 255},
+	// 	Magenta:      ct.RGB{R: 255, G: 85, B: 255},
+	// 	Cyan:         ct.RGB{R: 85, G: 255, B: 255},
+	// 	White:        ct.RGB{R: 255, G: 255, B: 255},
+	// }
 
-	triads := ct.GetHarmonics(baseColor.ToHSL(), 3)
+	baseColor := ct.NewColorProfileFromRGB(200, 33, 217)
 
-	tetrads := ct.GetHarmonics(baseColor.ToHSL(), 4)
+	triads := ct.GetHarmonics(&baseColor, 3)
 
-	harmonics := ct.GetHarmonics(baseColor.ToHSL(), 9)
+	tetrads := ct.GetHarmonics(&baseColor, 4)
 
-	analogous := ct.GetAnalogous(baseColor.ToHSL(), 9, 50)
+	harmonics := ct.GetHarmonics(&baseColor, 9)
 
-	monochromatics := ct.GetMonochromatic(baseColor.ToHSL(), 20, 180)
+	analogous := ct.GetAnalogous(&baseColor, 9, 50)
+
+	monochromatics := ct.GetMonochromatic(&baseColor, 20, 180)
 
 	allColorGroups := []displayColorGroup{
-		makeColorGroup([]ct.HSL{baseColor.ToHSL()}, "Base Color", "Base "),
+		makeColorGroup([]ct.ColorProfile{baseColor}, "Base Color", "Base "),
 		makeColorGroup(triads, "Triads - 3 colors evenly distributed", "Triad"),
 		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
 		makeColorGroup(harmonics, "Harmonic Set - 9 Steps", "9th_Harmonics"),
@@ -46,8 +71,27 @@ func main() {
 
 }
 
+// type terminalPalette struct {
+// 	Black,
+// 	LightRed,
+// 	LightGreen,
+// 	Yellow,
+// 	LightBlue,
+// 	LightMagenta,
+// 	LightCyan,
+// 	HighWhite,
+// 	Grey,
+// 	Red,
+// 	Green,
+// 	Brown,
+// 	Blue,
+// 	Magenta,
+// 	Cyan,
+// 	White ct.RGB
+// }
+
 type displayColor struct {
-	Color       ct.HSL
+	Color       ct.ColorProfile
 	Description string
 	HexStr      string
 	HslStr      string
@@ -60,22 +104,18 @@ type displayColorGroup struct {
 	GroupTitle string
 }
 
-func makeColorGroup(colSlice []ct.HSL, groupTitle string, individualIdentifier string) displayColorGroup {
+func makeColorGroup(colSlice []ct.ColorProfile, groupTitle string, individualIdentifier string) displayColorGroup {
 	colors := []displayColor{}
 
-	for i, hsl := range colSlice {
-
-		rgb := hsl.ToRGB()
-		hsv := rgb.ToHSV()
-
+	for i, color := range colSlice {
 		colors = append(colors,
 			displayColor{
-				Color:       hsl,
+				Color:       color,
 				Description: fmt.Sprintf("%s[%d]", individualIdentifier, i),
-				HexStr:      rgb.AsHEXSTR(),
-				HsvStr:      hsv.String(),
-				HslStr:      hsl.String(),
-				RgbStr:      rgb.String(),
+				HexStr:      color.RGB.AsHEXSTR(),
+				HsvStr:      color.HSV.String(),
+				HslStr:      color.HSL.String(),
+				RgbStr:      color.RGB.String(),
 			},
 		)
 	}
