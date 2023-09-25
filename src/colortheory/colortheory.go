@@ -6,18 +6,23 @@ import (
 )
 
 // Math Exts
+
+// clampFloat constrains a float64 value v between min and max.
 func clampFloat(v, min, max float64) float64 {
 	return math.Min(math.Max((v), min), max)
 }
 
+// clampRGBColVal constrains an int value v between 0 and 255 and returns it as uint8.
 func clampRGBColVal(v int) uint8 {
 	return uint8(min(max((v), 0), 255))
 }
 
+// positiveMod computes the positive modulus of a and b.
 func positiveMod(a, b int) int {
 	return (a%b + b) % b
 }
 
+// absInt calculates the absolute difference between two integers a and b.
 func absInt(a, b int) int {
 	n := a - b
 	if n < 0 {
@@ -33,21 +38,22 @@ const (
 	one_third  float64 = 1.0 / 3.0
 )
 
-// Contains Hue, Saturation, Lightness (float64 [0-1])
+// cHSL represents a color in Hue, Saturation, and Lightness format. (float64 [0-1])
 type cHSL struct {
 	H, S, L float64
 }
 
-// Contains Hue, Saturation, Lightness (float64 [0-1])
+// cHSV represents a color in Hue, Saturation, and Value format. (float64 [0-1])
 type cHSV struct {
 	H, S, V float64
 }
 
-// Contains Red, Green, Blue (uint8 [0-255])
+// cRGB represents a color in Red, Green, and Blue format. (uint8 [0-255])
 type cRGB struct {
 	R, G, B uint8
 }
 
+// ColorProfile represents a color with different color representations and an Alpha value.
 type ColorProfile struct {
 	HSL   cHSL
 	HSV   cHSV
@@ -55,6 +61,7 @@ type ColorProfile struct {
 	Alpha float64
 }
 
+// NewColorProfileFromRGB creates a new ColorProfile from Red, Green, and Blue values.
 func NewColorProfileFromRGB(r, g, b uint8) ColorProfile {
 	rgb := cRGB{r, g, b}
 	return ColorProfile{
@@ -65,6 +72,7 @@ func NewColorProfileFromRGB(r, g, b uint8) ColorProfile {
 	}
 }
 
+// NewColorProfileFromHSL creates a new ColorProfile from Hue, Saturation, and Lightness values.
 func NewColorProfileFromHSL(h, s, l float64) ColorProfile {
 	hsl := cHSL{h, s, l}
 	rgb := hsl.ToRGB()
@@ -116,7 +124,7 @@ func (rgb *cRGB) String() string {
 	return fmt.Sprintf("cRGB(%d, %d, %d)", rgb.R, rgb.G, rgb.B)
 }
 
-// cRGB -> cHSL
+// ToHSL converts RGB color representation to HSL.
 func (rgb *cRGB) ToHSL() cHSL {
 
 	// Get cRGB as % of max
@@ -168,7 +176,7 @@ func (rgb *cRGB) ToHSL() cHSL {
 	return cHSL{H, S, L}
 }
 
-// cRGB -> cHSV
+// ToHSV converts RGB color representation to HSV.
 func (rgb *cRGB) ToHSV() cHSV {
 
 	// Get cRGB as % of max
@@ -207,20 +215,22 @@ func (rgb *cRGB) ToHSV() cHSV {
 	return cHSV{H, S, V}
 }
 
-// cRGB -> HEX
+// AsHEXSTR returns the HEX string representation of an RGB color.
 func (rgb cRGB) AsHEXSTR() string {
 	return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
 }
 
+// AsArray returns the RGB color as an array of uint8.
 func (rgb cRGB) AsArray() [3]uint8 {
 	return [3]uint8{rgb.R, rgb.G, rgb.B}
 }
 
+// RGBfromArray creates an RGB color from an array of uint8.
 func RGBfromArray(arr [3]uint8) cRGB {
 	return cRGB{arr[0], arr[1], arr[2]}
 }
 
-// cHSL -> cRGB
+// ToRGB converts HSL color representation to RGB.
 func (hsl *cHSL) ToRGB() cRGB {
 
 	var hueTocRGB = func(lightness, chroma, hue float64) float64 {
@@ -264,7 +274,7 @@ func (hsl *cHSL) ToRGB() cRGB {
 	return cRGB{uint8(r * 255), uint8(g * 255), uint8(b * 255)}
 }
 
-// cHSV -> cRGB
+// ToRGB converts HSV color representation to RGB.
 func (hsv *cHSV) ToRGB() cRGB {
 
 	R, G, B := 0.0, 0.0, 0.0
@@ -294,23 +304,27 @@ func (hsv *cHSV) ToRGB() cRGB {
 	return cRGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
 }
 
+// Lighten lightens the HSL color by a specific percent.
 func (hsl *cHSL) Lighten(percent int) {
 	hsl.L = clampFloat(hsl.L+(0.01*float64(percent)), 0.0, 1.0)
 }
 
+// Darken darkens the HSL color by a specific percent.
 func (hsl *cHSL) Darken(percent int) {
 	hsl.L = clampFloat(hsl.L-(0.01*float64(percent)), 0.0, 1.0)
 }
 
+// Saturate increases the saturation of the HSL color by a specific percent.
 func (hsl *cHSL) Saturate(percent int) {
 	hsl.S = clampFloat(hsl.S+(0.01*float64(percent)), 0.0, 1.0)
 }
 
+// Desaturate decreases the saturation of the HSL color by a specific percent.
 func (hsl *cHSL) Desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
 }
 
-// returns deviance percent [0-1]
+// totalDeviance calculates the total deviance between two RGB colors and returns it as a percent.
 func totalDeviance(a *cRGB, b *cRGB) float64 {
 	rD := float64(absInt(int(a.R), int(b.R)))
 	gD := float64(absInt(int(a.B), int(b.B)))
@@ -319,10 +333,12 @@ func totalDeviance(a *cRGB, b *cRGB) float64 {
 	return (rD + gD + bD) / 765.0
 }
 
+// GetClosestColor finds the closest color from a list to the given color.
 func GetClosestColor(col *ColorProfile, list []ColorProfile) {
 
 }
 
+// GetHarmonics generates harmonic colors from a base color.
 func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
 
 	harmonics := []ColorProfile{*color}
@@ -337,6 +353,7 @@ func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
 	return harmonics
 }
 
+// GetAnalogous generates analogous colors from a base color.
 func GetAnalogous(color *ColorProfile, count, degreesSpread int) []ColorProfile {
 
 	analogous := []ColorProfile{}
@@ -356,6 +373,7 @@ func GetAnalogous(color *ColorProfile, count, degreesSpread int) []ColorProfile 
 	return analogous
 }
 
+// GetMonochromatic generates monochromatic colors from a base color.
 func GetMonochromatic(color *ColorProfile, count, rangePercent int) []ColorProfile {
 	colors := []ColorProfile{}
 	rgb := color.RGB
