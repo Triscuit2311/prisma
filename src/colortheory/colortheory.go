@@ -9,11 +9,21 @@ import (
 func clampFloat(v, min, max float64) float64 {
 	return math.Min(math.Max((v), min), max)
 }
+
 func clampRGBColVal(v int) uint8 {
 	return uint8(min(max((v), 0), 255))
 }
+
 func positiveMod(a, b int) int {
 	return (a%b + b) % b
+}
+
+func absInt(a, b int) int {
+	n := a - b
+	if n < 0 {
+		n = -n
+	}
+	return n
 }
 
 const (
@@ -24,45 +34,92 @@ const (
 )
 
 // Contains Hue, Saturation, Lightness (float64 [0-1])
-type HSL struct {
+type cHSL struct {
 	H, S, L float64
 }
 
 // Contains Hue, Saturation, Lightness (float64 [0-1])
-type HSV struct {
+type cHSV struct {
 	H, S, V float64
 }
 
 // Contains Red, Green, Blue (uint8 [0-255])
-type RGB struct {
+type cRGB struct {
 	R, G, B uint8
 }
 
+type ColorProfile struct {
+	HSL   cHSL
+	HSV   cHSV
+	RGB   cRGB
+	Alpha float64
+}
+
+func NewColorProfileFromRGB(r, g, b uint8) ColorProfile {
+	rgb := cRGB{r, g, b}
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   rgb.ToHSL(),
+		HSV:   rgb.ToHSV(),
+		Alpha: 1.0,
+	}
+}
+
+func NewColorProfileFromHSL(h, s, l float64) ColorProfile {
+	hsl := cHSL{h, s, l}
+	rgb := hsl.ToRGB()
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   hsl,
+		HSV:   rgb.ToHSV(),
+		Alpha: 1.0,
+	}
+}
+
+func newColorProfileFromFullHSL(hsl cHSL) ColorProfile {
+	rgb := hsl.ToRGB()
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   hsl,
+		HSV:   rgb.ToHSV(),
+		Alpha: 1.0,
+	}
+}
+
+func newColorProfileFromFullRGB(rgb cRGB) ColorProfile {
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   rgb.ToHSL(),
+		HSV:   rgb.ToHSV(),
+		Alpha: 1.0,
+	}
+}
+
 // Pretty format [0-360°,0-100%,0-100%]
-func (hsl *HSL) String() string {
-	return fmt.Sprintf("HSL(%d°, %d%%, %d%%)",
+func (hsl *cHSL) String() string {
+	return fmt.Sprintf("cHSL(%d°, %d%%, %d%%)",
 		positiveMod(int(hsl.H*360), 360),
 		positiveMod(int(hsl.S*100), 100),
 		positiveMod(int(hsl.L*100), 100))
 }
 
 // Pretty format [0-360°,0-100%,0-100%]
-func (hsv *HSV) String() string {
-	return fmt.Sprintf("HSV(%d°, %d%%, %d%%)",
+func (hsv *cHSV) String() string {
+	return fmt.Sprintf("cHSV(%d°, %d%%, %d%%)",
 		positiveMod(int(hsv.H*360), 360),
 		positiveMod(int(hsv.S*100), 100),
 		positiveMod(int(hsv.V*100), 100))
 }
 
 // Pretty format [0-255,0-255,0-255]
-func (rgb *RGB) String() string {
-	return fmt.Sprintf("RGB(%d, %d, %d)", rgb.R, rgb.G, rgb.B)
+func (rgb *cRGB) String() string {
+	return fmt.Sprintf("cRGB(%d, %d, %d)", rgb.R, rgb.G, rgb.B)
 }
 
-// RGB -> HSL
-func (rgb *RGB) ToHSL() HSL {
+// cRGB -> cHSL
+func (rgb *cRGB) ToHSL() cHSL {
 
-	// Get RGB as % of max
+	// Get cRGB as % of max
 	nR := float64(rgb.R) / 255.0
 	nG := float64(rgb.G) / 255.0
 	nB := float64(rgb.B) / 255.0
@@ -79,7 +136,7 @@ func (rgb *RGB) ToHSL() HSL {
 	// Grayscale, B/W
 	if maxV == minV {
 		// No Hue/Sat
-		return HSL{
+		return cHSL{
 			0,
 			0,
 			L,
@@ -108,13 +165,13 @@ func (rgb *RGB) ToHSL() HSL {
 
 	H /= 6
 
-	return HSL{H, S, L}
+	return cHSL{H, S, L}
 }
 
-// RGB -> HSV
-func (rgb *RGB) ToHSV() HSV {
+// cRGB -> cHSV
+func (rgb *cRGB) ToHSV() cHSV {
 
-	// Get RGB as % of max
+	// Get cRGB as % of max
 	nR := float64(rgb.R) / 255.0
 	nG := float64(rgb.G) / 255.0
 	nB := float64(rgb.B) / 255.0
@@ -147,24 +204,26 @@ func (rgb *RGB) ToHSV() HSV {
 		}
 		H /= 6
 	}
-	return HSV{H, S, V}
+	return cHSV{H, S, V}
 }
 
-// RGB -> HEX
-func (rgb RGB) AsHEXSTR() string {
+// cRGB -> HEX
+func (rgb cRGB) AsHEXSTR() string {
 	return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
 }
-func (rgb RGB) AsArray() [3]uint8 {
+
+func (rgb cRGB) AsArray() [3]uint8 {
 	return [3]uint8{rgb.R, rgb.G, rgb.B}
 }
-func RGBfromArray(arr [3]uint8) RGB {
-	return RGB{arr[0], arr[1], arr[2]}
+
+func RGBfromArray(arr [3]uint8) cRGB {
+	return cRGB{arr[0], arr[1], arr[2]}
 }
 
-// HSL -> RGB
-func (hsl *HSL) ToRGB() RGB {
+// cHSL -> cRGB
+func (hsl *cHSL) ToRGB() cRGB {
 
-	var hueToRGB = func(lightness, chroma, hue float64) float64 {
+	var hueTocRGB = func(lightness, chroma, hue float64) float64 {
 		if hue < 0 {
 			hue += 1
 		}
@@ -186,7 +245,7 @@ func (hsl *HSL) ToRGB() RGB {
 	// Grayscale, B/W
 	if hsl.S == 0 {
 		lightness := uint8(hsl.L * 255.0)
-		return RGB{lightness, lightness, lightness}
+		return cRGB{lightness, lightness, lightness}
 	}
 
 	chroma := 0.0
@@ -198,15 +257,15 @@ func (hsl *HSL) ToRGB() RGB {
 	}
 	lightness := 2*hsl.L - chroma
 
-	r := hueToRGB(lightness, chroma, hsl.H+one_third)
-	g := hueToRGB(lightness, chroma, hsl.H)
-	b := hueToRGB(lightness, chroma, hsl.H-one_third)
+	r := hueTocRGB(lightness, chroma, hsl.H+one_third)
+	g := hueTocRGB(lightness, chroma, hsl.H)
+	b := hueTocRGB(lightness, chroma, hsl.H-one_third)
 
-	return RGB{uint8(r * 255), uint8(g * 255), uint8(b * 255)}
+	return cRGB{uint8(r * 255), uint8(g * 255), uint8(b * 255)}
 }
 
-// HSV -> RGB
-func (hsv *HSV) ToRGB() RGB {
+// cHSV -> cRGB
+func (hsv *cHSV) ToRGB() cRGB {
 
 	R, G, B := 0.0, 0.0, 0.0
 
@@ -232,96 +291,84 @@ func (hsv *HSV) ToRGB() RGB {
 
 	}
 
-	return RGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
+	return cRGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
 }
 
-func (hsl *HSL) Lighten(percent int) {
+func (hsl *cHSL) Lighten(percent int) {
 	hsl.L = clampFloat(hsl.L+(0.01*float64(percent)), 0.0, 1.0)
 }
 
-func (hsl *HSL) Darken(percent int) {
+func (hsl *cHSL) Darken(percent int) {
 	hsl.L = clampFloat(hsl.L-(0.01*float64(percent)), 0.0, 1.0)
 }
 
-func (hsl *HSL) Saturate(percent int) {
+func (hsl *cHSL) Saturate(percent int) {
 	hsl.S = clampFloat(hsl.S+(0.01*float64(percent)), 0.0, 1.0)
 }
 
-func (hsl *HSL) Desaturate(percent int) {
+func (hsl *cHSL) Desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
 }
 
-// GetHarmonics generates a slice of harmonic HSL colors based on an input color.
-// It calculates harmonics by incrementing the hue value while keeping saturation
-// and lightness constant.
-//
-// hsl: The base color from which harmonics are generated.
-// count: The number of harmonic colors to generate.
-//
-// Returns a slice of HSL colors representing the harmonic colors.
-func GetHarmonics(hsl HSL, count int) []HSL {
+// returns deviance percent [0-1]
+func totalDeviance(a *cRGB, b *cRGB) float64 {
+	rD := float64(absInt(int(a.R), int(b.R)))
+	gD := float64(absInt(int(a.B), int(b.B)))
+	bD := float64(absInt(int(a.G), int(b.G)))
 
-	harmonics := []HSL{hsl}
+	return (rD + gD + bD) / 765.0
+}
+
+func GetClosestColor(col *ColorProfile, list []ColorProfile) {
+
+}
+
+func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
+
+	harmonics := []ColorProfile{*color}
 
 	percentInc := 1.0 / float64(count)
 
 	for i := 1; i < count; i++ {
-		col := hsl
+		col := color.HSL
 		col.H = math.Mod(col.H+(percentInc*float64(i)), 1.0)
-		harmonics = append(harmonics, col)
+		harmonics = append(harmonics, newColorProfileFromFullHSL(col))
 	}
 	return harmonics
 }
 
-// GetAnalogous generates a slice of analogous HSL colors based on an input color.
-// It varies the hue of the colors over a specified degree spread while keeping
-// the saturation and lightness constant.
-//
-// hsl: The base color from which analogous colors are generated.
-// count: The number of analogous colors to generate.
-// degreesSpread: The total spread of the hue in degrees over which the colors are generated.
-//
-// Returns a slice of HSL colors representing the analogous colors.
-func GetAnalogous(hsl HSL, count, degreesSpread int) []HSL {
-	analogous := []HSL{}
+func GetAnalogous(color *ColorProfile, count, degreesSpread int) []ColorProfile {
+
+	analogous := []ColorProfile{}
 
 	percentInc := (float64(degreesSpread) / float64(count)) / 360.0
 
-	start := hsl.H - (percentInc * (float64(count) / 2.0))
+	start := color.HSL.H - (percentInc * (float64(count) / 2.0))
 
 	for i := 0; i < count; i++ {
-		col := HSL{
+		col := cHSL{
 			H: math.Mod(start+(percentInc*float64(i)), 1.0),
-			S: hsl.S,
-			L: hsl.L,
+			S: color.HSL.S,
+			L: color.HSL.L,
 		}
-		analogous = append(analogous, col)
+		analogous = append(analogous, newColorProfileFromFullHSL(col))
 	}
 	return analogous
 }
 
-// GetMonochromatic generates a slice of monochromatic HSL colors based on
-// an input HSL color. It varies the lightness of the colors while keeping
-// the hue same.
-//
-// hsl: base color.
-// count: number of colors to generate.
-// rangePercent: percent of lightness range to use for generation.
-//
-// Returns a slice of HSL colors with varied lightness.
-func GetMonochromatic(hsl HSL, count, rangePercent int) []HSL {
-	colors := []HSL{}
-	rgb := hsl.ToRGB()
+func GetMonochromatic(color *ColorProfile, count, rangePercent int) []ColorProfile {
+	colors := []ColorProfile{}
+	rgb := color.RGB
 
 	scaledRange := int(float64(rangePercent) / 100.0 * 255.0)
 
 	for i := 0 - (count / 2); i < count/2; i++ {
-		col := RGB{
+		col := cRGB{
 			R: clampRGBColVal(int(rgb.R) + int(i*(scaledRange/count))),
 			G: clampRGBColVal(int(rgb.G) + int(i*(scaledRange/count))),
 			B: clampRGBColVal(int(rgb.B) + int(i*(scaledRange/count))),
 		}
-		colors = append(colors, col.ToHSL())
+		colors = append(colors, newColorProfileFromFullRGB(col))
 	}
 
 	return colors
