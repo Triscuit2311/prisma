@@ -251,6 +251,14 @@ func (hsl *HSL) Desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
 }
 
+// GetHarmonics generates a slice of harmonic HSL colors based on an input color.
+// It calculates harmonics by incrementing the hue value while keeping saturation
+// and lightness constant.
+//
+// hsl: The base color from which harmonics are generated.
+// count: The number of harmonic colors to generate.
+//
+// Returns a slice of HSL colors representing the harmonic colors.
 func GetHarmonics(hsl HSL, count int) []HSL {
 
 	harmonics := []HSL{hsl}
@@ -265,6 +273,15 @@ func GetHarmonics(hsl HSL, count int) []HSL {
 	return harmonics
 }
 
+// GetAnalogous generates a slice of analogous HSL colors based on an input color.
+// It varies the hue of the colors over a specified degree spread while keeping
+// the saturation and lightness constant.
+//
+// hsl: The base color from which analogous colors are generated.
+// count: The number of analogous colors to generate.
+// degreesSpread: The total spread of the hue in degrees over which the colors are generated.
+//
+// Returns a slice of HSL colors representing the analogous colors.
 func GetAnalogous(hsl HSL, count, degreesSpread int) []HSL {
 	analogous := []HSL{}
 
@@ -283,7 +300,15 @@ func GetAnalogous(hsl HSL, count, degreesSpread int) []HSL {
 	return analogous
 }
 
-// Hue stays the same, saturation and lightness spread
+// GetMonochromatic generates a slice of monochromatic HSL colors based on
+// an input HSL color. It varies the lightness of the colors while keeping
+// the hue same.
+//
+// hsl: base color.
+// count: number of colors to generate.
+// rangePercent: percent of lightness range to use for generation.
+//
+// Returns a slice of HSL colors with varied lightness.
 func GetMonochromatic(hsl HSL, count, rangePercent int) []HSL {
 	colors := []HSL{}
 	rgb := hsl.ToRGB()
