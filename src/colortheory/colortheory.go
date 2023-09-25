@@ -59,6 +59,11 @@ type ColorProfile struct {
 	HSV   cHSV
 	RGB   cRGB
 	Alpha float64
+	Name  string
+}
+
+func (color *ColorProfile) SetName(name string) {
+	color.Name = name
 }
 
 // NewColorProfileFromRGB creates a new ColorProfile from Red, Green, and Blue values.
