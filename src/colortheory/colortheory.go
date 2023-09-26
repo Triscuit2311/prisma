@@ -310,23 +310,59 @@ func (hsv *cHSV) ToRGB() cRGB {
 }
 
 // Lighten lightens the HSL color by a specific percent.
-func (hsl *cHSL) Lighten(percent int) {
+func (hsl *cHSL) lighten(percent int) {
 	hsl.L = clampFloat(hsl.L+(0.01*float64(percent)), 0.0, 1.0)
 }
 
 // Darken darkens the HSL color by a specific percent.
-func (hsl *cHSL) Darken(percent int) {
+func (hsl *cHSL) darken(percent int) {
 	hsl.L = clampFloat(hsl.L-(0.01*float64(percent)), 0.0, 1.0)
 }
 
 // Saturate increases the saturation of the HSL color by a specific percent.
-func (hsl *cHSL) Saturate(percent int) {
+func (hsl *cHSL) saturate(percent int) {
 	hsl.S = clampFloat(hsl.S+(0.01*float64(percent)), 0.0, 1.0)
 }
 
 // Desaturate decreases the saturation of the HSL color by a specific percent.
-func (hsl *cHSL) Desaturate(percent int) {
+func (hsl *cHSL) desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
+}
+
+// Lighten lightens the color by a specific percent.
+func (color ColorProfile) Lightened(percent int) ColorProfile {
+	col := color
+	col.HSL.lighten(percent)
+	col.RGB = col.HSL.ToRGB()
+	col.HSV = col.RGB.ToHSV()
+	return col
+}
+
+// Darken darkens the color by a specific percent.
+func (color ColorProfile) Darkened(percent int) ColorProfile {
+	col := color
+	col.HSL.darken(percent)
+	col.RGB = col.HSL.ToRGB()
+	col.HSV = col.RGB.ToHSV()
+	return col
+}
+
+// Saturate increases the saturation of the HSL color by a specific percent.
+func (color ColorProfile) Saturated(percent int) ColorProfile {
+	col := color
+	col.HSL.saturate(percent)
+	col.RGB = col.HSL.ToRGB()
+	col.HSV = col.RGB.ToHSV()
+	return col
+}
+
+// Desaturate decreases the saturation of the HSL color by a specific percent.
+func (color ColorProfile) Desaturated(percent int) ColorProfile {
+	col := color
+	col.HSL.desaturate(percent)
+	col.RGB = col.HSL.ToRGB()
+	col.HSV = col.RGB.ToHSV()
+	return col
 }
 
 // totalDeviance calculates the total deviance between two RGB colors and returns it as a percent.
@@ -378,6 +414,8 @@ func GetClosestColorRelative(refernceDiff, weight float64, col *ColorProfile, li
 	}
 	return list[minIdx]
 }
+
+//TODO: getclose color in correct direction of deviation
 
 // GetHarmonics generates harmonic colors from a base color.
 func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
