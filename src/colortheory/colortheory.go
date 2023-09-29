@@ -289,56 +289,6 @@ func (color ColorProfile) Desaturated(percent int) ColorProfile {
 	return col
 }
 
-// totalDeviance calculates the total deviance between two RGB colors and returns it as a percent.
-func TotalDeviance(a *cRGB, b *cRGB) float64 {
-	rD := float64(absInt(int(a.R), int(b.R)))
-	gD := float64(absInt(int(a.B), int(b.B)))
-	bD := float64(absInt(int(a.G), int(b.G)))
-
-	return (rD + gD + bD) / 765.0
-}
-
-// GetClosestColor finds the closest color from a list to the given color.
-func GetClosestColor(col *ColorProfile, list []ColorProfile) ColorProfile {
-
-	if len(list) == 0 {
-		return *col
-	}
-
-	minIdx := 0
-	lowestDiff := 1.1
-
-	for i, v := range list {
-		if diff := TotalDeviance(&col.RGB, &v.RGB); diff < lowestDiff {
-			lowestDiff = diff
-			minIdx = i
-		}
-	}
-	return list[minIdx]
-}
-
-// GetClosestColor finds the closest color from a list to the given color,
-// using a weighed reference deviation
-func GetClosestColorRelative(refernceDiff, weight float64, col *ColorProfile, list []ColorProfile) ColorProfile {
-
-	if len(list) == 0 {
-		return *col
-	}
-
-	weightedDiff := refernceDiff * clampFloat(weight, 0, 1)
-
-	minIdx := 0
-	lowestDiff := 10.0
-
-	for i, v := range list {
-		if diff := math.Abs(TotalDeviance(&col.RGB, &v.RGB) - weightedDiff); diff < lowestDiff {
-			lowestDiff = diff
-			minIdx = i
-		}
-	}
-	return list[minIdx]
-}
-
 // GetHarmonics generates harmonic colors from a base color.
 func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
 
