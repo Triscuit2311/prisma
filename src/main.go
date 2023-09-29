@@ -231,7 +231,6 @@ type displayColor struct {
 	Description string
 	HexStr      string
 	HslStr      string
-	HsvStr      string
 	RgbStr      string
 }
 
@@ -253,7 +252,6 @@ func makeColorGroup(colSlice []ct.ColorProfile, groupTitle string, individualIde
 				Color:       color,
 				Description: description,
 				HexStr:      color.RGB.AsHEXSTR(),
-				HsvStr:      color.HSV.String(),
 				HslStr:      color.HSL.String(),
 				RgbStr:      color.RGB.String(),
 			},

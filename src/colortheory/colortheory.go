@@ -12,6 +12,21 @@ func clampFloat(v, min, max float64) float64 {
 	return math.Min(math.Max((v), min), max)
 }
 
+func wrapFloat(v, min, max float64) float64 {
+	if min >= max {
+		panic("min must be less than max")
+	}
+
+	r := max - min
+	if v < min {
+		return wrapFloat(v+r, min, max)
+	} else if v > max {
+		return wrapFloat(v-r, min, max)
+	}
+
+	return v
+}
+
 // clampRGBColVal constrains an int value v between 0 and 255 and returns it as uint8.
 func clampRGBColVal(v int) uint8 {
 	return uint8(min(max((v), 0), 255))
@@ -43,11 +58,6 @@ type cHSL struct {
 	H, S, L float64
 }
 
-// cHSV represents a color in Hue, Saturation, and Value format. (float64 [0-1])
-type cHSV struct {
-	H, S, V float64
-}
-
 // cRGB represents a color in Red, Green, and Blue format. (uint8 [0-255])
 type cRGB struct {
 	R, G, B uint8
@@ -56,7 +66,6 @@ type cRGB struct {
 // ColorProfile represents a color with different color representations and an Alpha value.
 type ColorProfile struct {
 	HSL   cHSL
-	HSV   cHSV
 	RGB   cRGB
 	Alpha float64
 	Name  string
@@ -72,7 +81,6 @@ func NewColorProfileFromRGB(r, g, b uint8) ColorProfile {
 	return ColorProfile{
 		RGB:   rgb,
 		HSL:   rgb.ToHSL(),
-		HSV:   rgb.ToHSV(),
 		Alpha: 1.0,
 	}
 }
@@ -84,7 +92,6 @@ func NewColorProfileFromHSL(h, s, l float64) ColorProfile {
 	return ColorProfile{
 		RGB:   rgb,
 		HSL:   hsl,
-		HSV:   rgb.ToHSV(),
 		Alpha: 1.0,
 	}
 }
@@ -94,7 +101,6 @@ func newColorProfileFromFullHSL(hsl cHSL) ColorProfile {
 	return ColorProfile{
 		RGB:   rgb,
 		HSL:   hsl,
-		HSV:   rgb.ToHSV(),
 		Alpha: 1.0,
 	}
 }
@@ -103,7 +109,6 @@ func newColorProfileFromFullRGB(rgb cRGB) ColorProfile {
 	return ColorProfile{
 		RGB:   rgb,
 		HSL:   rgb.ToHSL(),
-		HSV:   rgb.ToHSV(),
 		Alpha: 1.0,
 	}
 }
@@ -114,14 +119,6 @@ func (hsl *cHSL) String() string {
 		positiveMod(int(hsl.H*360), 360),
 		positiveMod(int(hsl.S*100), 100),
 		positiveMod(int(hsl.L*100), 100))
-}
-
-// Pretty format [0-360°,0-100%,0-100%]
-func (hsv *cHSV) String() string {
-	return fmt.Sprintf("cHSV(%d°, %d%%, %d%%)",
-		positiveMod(int(hsv.H*360), 360),
-		positiveMod(int(hsv.S*100), 100),
-		positiveMod(int(hsv.V*100), 100))
 }
 
 // Pretty format [0-255,0-255,0-255]
@@ -179,45 +176,6 @@ func (rgb *cRGB) ToHSL() cHSL {
 	H /= 6
 
 	return cHSL{H, S, L}
-}
-
-// ToHSV converts RGB color representation to HSV.
-func (rgb *cRGB) ToHSV() cHSV {
-
-	// Get cRGB as % of max
-	nR := float64(rgb.R) / 255.0
-	nG := float64(rgb.G) / 255.0
-	nB := float64(rgb.B) / 255.0
-
-	minV := math.Min(nR, math.Min(nG, nB))
-	maxV := math.Max(nR, math.Max(nG, nB))
-	delta := maxV - minV
-
-	H, S, V := maxV, maxV, maxV
-
-	if maxV == 0.0 {
-		S = 0
-	} else {
-		S = delta / maxV
-	}
-
-	if maxV == minV {
-		H = 0
-	} else {
-		switch {
-		case rgb.R >= rgb.B && rgb.R >= rgb.G:
-			if nG < nB {
-				delta += 6
-			}
-			H = (nG - nB) / delta
-		case rgb.G >= rgb.R && rgb.G >= rgb.B:
-			H = (nB-nR)/delta + 2
-		default:
-			H = (nR-nG)/delta + 4
-		}
-		H /= 6
-	}
-	return cHSV{H, S, V}
 }
 
 // AsHEXSTR returns the HEX string representation of an RGB color.
@@ -279,36 +237,6 @@ func (hsl *cHSL) ToRGB() cRGB {
 	return cRGB{uint8(r * 255), uint8(g * 255), uint8(b * 255)}
 }
 
-// ToRGB converts HSV color representation to RGB.
-func (hsv *cHSV) ToRGB() cRGB {
-
-	R, G, B := 0.0, 0.0, 0.0
-
-	sectorNum := math.Floor(hsv.H * 6.0)
-	fractionalSector := hsv.H*6.0 - sectorNum
-	decSaturation := hsv.V * (1.0 - hsv.S)
-	partialDec := hsv.V * (1.0 - fractionalSector*hsv.S)
-	largeDec := hsv.V * (1.0 - (1.0-fractionalSector)*hsv.S)
-
-	switch int(sectorNum) % 6 {
-	case 0:
-		R, G, B = hsv.V, largeDec, decSaturation
-	case 1:
-		R, G, B = partialDec, hsv.V, decSaturation
-	case 2:
-		R, G, B = decSaturation, hsv.V, largeDec
-	case 3:
-		R, G, B = decSaturation, partialDec, hsv.V
-	case 4:
-		R, G, B = largeDec, decSaturation, hsv.V
-	case 5:
-		R, G, B = hsv.V, decSaturation, partialDec
-
-	}
-
-	return cRGB{uint8(R * 255), uint8(G * 255), uint8(B * 255)}
-}
-
 // Lighten lightens the HSL color by a specific percent.
 func (hsl *cHSL) lighten(percent int) {
 	hsl.L = clampFloat(hsl.L+(0.01*float64(percent)), 0.0, 1.0)
@@ -334,7 +262,6 @@ func (color ColorProfile) Lightened(percent int) ColorProfile {
 	col := color
 	col.HSL.lighten(percent)
 	col.RGB = col.HSL.ToRGB()
-	col.HSV = col.RGB.ToHSV()
 	return col
 }
 
@@ -343,7 +270,6 @@ func (color ColorProfile) Darkened(percent int) ColorProfile {
 	col := color
 	col.HSL.darken(percent)
 	col.RGB = col.HSL.ToRGB()
-	col.HSV = col.RGB.ToHSV()
 	return col
 }
 
@@ -352,7 +278,6 @@ func (color ColorProfile) Saturated(percent int) ColorProfile {
 	col := color
 	col.HSL.saturate(percent)
 	col.RGB = col.HSL.ToRGB()
-	col.HSV = col.RGB.ToHSV()
 	return col
 }
 
@@ -361,7 +286,6 @@ func (color ColorProfile) Desaturated(percent int) ColorProfile {
 	col := color
 	col.HSL.desaturate(percent)
 	col.RGB = col.HSL.ToRGB()
-	col.HSV = col.RGB.ToHSV()
 	return col
 }
 
@@ -415,7 +339,73 @@ func GetClosestColorRelative(refernceDiff, weight float64, col *ColorProfile, li
 	return list[minIdx]
 }
 
-//TODO: getclose color in correct direction of deviation
+type DevianceProfile struct {
+	HueOffset, SaturationOffset, LightnessOffset float64
+}
+
+func (deviance *DevianceProfile) scale(val float64) {
+	deviance.HueOffset *= val
+	deviance.LightnessOffset *= val
+	deviance.SaturationOffset *= val
+}
+
+// getFullDeviance returns a devianceprofile of a color given a reference
+func GetFullDeviance(col *cHSL, ref *cHSL) DevianceProfile {
+	return DevianceProfile{
+		col.H - ref.H,
+		col.S - ref.S,
+		col.L - ref.L,
+	}
+}
+
+func createHslFromDeviance(ref *cHSL, deviance *DevianceProfile) cHSL {
+	return cHSL{
+		H: wrapFloat(ref.H+deviance.HueOffset, 0, 1),
+		S: clampFloat(ref.S+deviance.SaturationOffset, 0, 1),
+		L: clampFloat(ref.L+deviance.LightnessOffset, 0, 1),
+	}
+}
+
+func TransformWithDeviance(color *ColorProfile, deviance *DevianceProfile) ColorProfile {
+	return newColorProfileFromFullHSL(createHslFromDeviance(&color.HSL, deviance))
+}
+
+func compareHsl(a *cHSL, b *cHSL) float64 {
+	devalueWeight := 1.0
+
+	dH := math.Abs(a.H - b.H)
+	dS := math.Abs(a.S-b.S) / devalueWeight
+	dL := math.Abs(a.L-b.L) / devalueWeight
+
+	return dH + dS + dL
+}
+
+// TODO: getclose color in correct direction of deviation
+func GetClosestColorDirectional(ref *ColorProfile, deviance DevianceProfile, weight float64, list []ColorProfile) ColorProfile {
+
+	if len(list) == 0 {
+		return *ref
+	}
+
+	//refernceDiff := GetFullDeviance(&col.HSL, &ref.HSL)
+
+	deviance.scale(clampFloat(weight, 0, 1))
+
+	bestMatchIndex := 0
+	bestMatchValue := math.MaxFloat64
+
+	target := createHslFromDeviance(&ref.HSL, &deviance)
+
+	for i, v := range list {
+
+		if delta := compareHsl(&v.HSL, &target); delta < bestMatchValue {
+			bestMatchIndex = i
+			bestMatchValue = delta
+		}
+	}
+
+	return list[bestMatchIndex]
+}
 
 // GetHarmonics generates harmonic colors from a base color.
 func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
