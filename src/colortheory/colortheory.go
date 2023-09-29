@@ -12,21 +12,6 @@ func clampFloat(v, min, max float64) float64 {
 	return math.Min(math.Max((v), min), max)
 }
 
-func wrapFloat(v, min, max float64) float64 {
-	if min >= max {
-		panic("min must be less than max")
-	}
-
-	r := max - min
-	if v < min {
-		return wrapFloat(v+r, min, max)
-	} else if v > max {
-		return wrapFloat(v-r, min, max)
-	}
-
-	return v
-}
-
 // clampRGBColVal constrains an int value v between 0 and 255 and returns it as uint8.
 func clampRGBColVal(v int) uint8 {
 	return uint8(min(max((v), 0), 255))
@@ -36,22 +21,6 @@ func clampRGBColVal(v int) uint8 {
 func positiveMod(a, b int) int {
 	return (a%b + b) % b
 }
-
-// absInt calculates the absolute difference between two integers a and b.
-func absInt(a, b int) int {
-	n := a - b
-	if n < 0 {
-		n = -n
-	}
-	return n
-}
-
-const (
-	one_sixth  float64 = 1.0 / 6.0
-	one_half   float64 = 1.0 / 2.0
-	two_thirds float64 = 2.0 / 3.0
-	one_third  float64 = 1.0 / 3.0
-)
 
 // cHSL represents a color in Hue, Saturation, and Lightness format. (float64 [0-1])
 type cHSL struct {
@@ -96,7 +65,7 @@ func NewColorProfileFromHSL(h, s, l float64) ColorProfile {
 	}
 }
 
-func newColorProfileFromFullHSL(hsl cHSL) ColorProfile {
+func newColorProfileFromHSLObj(hsl cHSL) ColorProfile {
 	rgb := hsl.ToRGB()
 	return ColorProfile{
 		RGB:   rgb,
@@ -105,7 +74,7 @@ func newColorProfileFromFullHSL(hsl cHSL) ColorProfile {
 	}
 }
 
-func newColorProfileFromFullRGB(rgb cRGB) ColorProfile {
+func newColorProfileFromRGBObj(rgb cRGB) ColorProfile {
 	return ColorProfile{
 		RGB:   rgb,
 		HSL:   rgb.ToHSL(),
@@ -203,14 +172,14 @@ func (hsl *cHSL) ToRGB() cRGB {
 		if hue > 1 {
 			hue -= 1
 		}
-		if hue < one_sixth {
+		if hue < 1.0/6.0 {
 			return lightness + (chroma-lightness)*6.0*hue
 		}
-		if hue < one_half {
+		if hue < 0.5 {
 			return chroma
 		}
-		if hue < two_thirds {
-			return lightness + (chroma-lightness)*(two_thirds-hue)*6.0
+		if hue < 2.0/3.0 {
+			return lightness + (chroma-lightness)*((2.0/3.0)-hue)*6.0
 		}
 		return lightness
 	}
@@ -230,9 +199,9 @@ func (hsl *cHSL) ToRGB() cRGB {
 	}
 	lightness := 2*hsl.L - chroma
 
-	r := hueTocRGB(lightness, chroma, hsl.H+one_third)
+	r := hueTocRGB(lightness, chroma, hsl.H+(1.0/3.0))
 	g := hueTocRGB(lightness, chroma, hsl.H)
-	b := hueTocRGB(lightness, chroma, hsl.H-one_third)
+	b := hueTocRGB(lightness, chroma, hsl.H-(1.0/3.0))
 
 	return cRGB{uint8(r * 255), uint8(g * 255), uint8(b * 255)}
 }
@@ -299,7 +268,7 @@ func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
 	for i := 1; i < count; i++ {
 		col := color.HSL
 		col.H = math.Mod(col.H+(percentInc*float64(i)), 1.0)
-		harmonics = append(harmonics, newColorProfileFromFullHSL(col))
+		harmonics = append(harmonics, newColorProfileFromHSLObj(col))
 	}
 	return harmonics
 }
@@ -319,7 +288,7 @@ func GetAnalogous(color *ColorProfile, count, degreesSpread int) []ColorProfile 
 			S: color.HSL.S,
 			L: color.HSL.L,
 		}
-		analogous = append(analogous, newColorProfileFromFullHSL(col))
+		analogous = append(analogous, newColorProfileFromHSLObj(col))
 	}
 	return analogous
 }
@@ -337,7 +306,7 @@ func GetMonochromatic(color *ColorProfile, count, rangePercent int) []ColorProfi
 			G: clampRGBColVal(int(rgb.G) + int(i*(scaledRange/count))),
 			B: clampRGBColVal(int(rgb.B) + int(i*(scaledRange/count))),
 		}
-		colors = append(colors, newColorProfileFromFullRGB(col))
+		colors = append(colors, newColorProfileFromRGBObj(col))
 	}
 
 	return colors

@@ -10,26 +10,6 @@ import (
 func main() {
 	baseColor := ct.NewColorProfileFromRGB(200, 33, 217)
 
-	// ubuntuColors := NewTerminalPalette(
-	// 	ct.NewColorProfileFromRGB(0, 0, 0),       //Black
-	// 	ct.NewColorProfileFromRGB(187, 0, 0),     //Red
-	// 	ct.NewColorProfileFromRGB(0, 187, 0),     //Green
-	// 	ct.NewColorProfileFromRGB(187, 187, 0),   //Yellow
-	// 	ct.NewColorProfileFromRGB(0, 0, 187),     //Blue
-	// 	ct.NewColorProfileFromRGB(187, 0, 187),   //Magenta
-	// 	ct.NewColorProfileFromRGB(0, 187, 187),   //Cyan
-	// 	ct.NewColorProfileFromRGB(187, 187, 187), //White
-	// 	ct.NewColorProfileFromRGB(85, 85, 85),    //Grey
-	// 	ct.NewColorProfileFromRGB(255, 85, 85),   //LightRed
-	// 	ct.NewColorProfileFromRGB(85, 255, 85),   //LightGreen
-	// 	ct.NewColorProfileFromRGB(255, 255, 85),  //Brown
-	// 	ct.NewColorProfileFromRGB(85, 85, 255),   //LightBlue
-	// 	ct.NewColorProfileFromRGB(255, 85, 255),  //LightMagenta
-	// 	ct.NewColorProfileFromRGB(85, 255, 255),  //LightCyan
-	// 	ct.NewColorProfileFromRGB(255, 255, 255), //White
-	// 	"(Ubuntu) ",
-	// )
-
 	// Ayu Mirage color scheme
 	ayuMirageColors := NewTerminalPalette(
 		ct.NewColorProfileFromRGB(20, 21, 25),    //Black
@@ -51,11 +31,6 @@ func main() {
 		"Ayu Mirage - ",
 	)
 
-	myPalette := GenerateTerminalPalette(
-		baseColor, ayuMirageColors.Magenta, 0.4,
-		ayuMirageColors, "MyPalette", 10, 90, 340, 40, 20,
-	)
-
 	triads := ct.GetHarmonics(&baseColor, 3)
 
 	tetrads := ct.GetHarmonics(&baseColor, 4)
@@ -69,7 +44,6 @@ func main() {
 	allColorGroups := []displayColorGroup{
 		makeColorGroup([]ct.ColorProfile{baseColor}, "Base Color", "Base "),
 		makeColorGroup(ayuMirageColors.asSlice(), "Ayu", "ubu"),
-		makeColorGroup(myPalette.asSlice(), "My Palette", "mine"),
 		makeColorGroup(triads, "Triads - 3 colors evenly distributed", "Triad"),
 		makeColorGroup(tetrads, "Tetrads - 4 colors evenly distributed", "Tetrad"),
 		makeColorGroup(harmonics, "Harmonic Set", "harmonics"),
@@ -90,58 +64,6 @@ func main() {
 	})
 	fmt.Println("Serving at: http://localhost:9000/")
 	http.ListenAndServe(":9000", nil)
-}
-
-func GenerateTerminalPalette(
-	color, referenceColor ct.ColorProfile, weight float64,
-	referencePalette terminalPalette, name string,
-	monoLightOffsetPercent, monoSatOffsetPercent,
-	monoDegrees, analogousDegrees, colorDensity int) terminalPalette {
-
-	diff := ct.TotalDeviance(&color.RGB, &referenceColor.RGB)
-	harmonics := ct.GetHarmonics(&color, colorDensity)
-	monochromatics := ct.GetMonochromatic(&color, colorDensity, monoDegrees)
-	analogousSet := ct.GetAnalogous(&color, colorDensity, analogousDegrees)
-
-	colorLibrary := append(harmonics, monochromatics...)
-	colorLibrary = append(colorLibrary, analogousSet...)
-
-	return NewTerminalPalette(
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Black, colorLibrary).Darkened(monoLightOffsetPercent).Desaturated(monoSatOffsetPercent), //Black
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Red, colorLibrary), //Red
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Green, colorLibrary), //Green
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Yellow, colorLibrary), //Yellow
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Blue, colorLibrary), //Blue
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Magenta, colorLibrary), //Magenta
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Cyan, colorLibrary), //Cyan
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.White, colorLibrary).Darkened(monoLightOffsetPercent).Desaturated(monoSatOffsetPercent), //White
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Grey, colorLibrary).Lightened(monoLightOffsetPercent).Desaturated(monoSatOffsetPercent), //Grey
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.LightRed, colorLibrary), //LightRed
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.LightGreen, colorLibrary), //LightGreen
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.Brown, colorLibrary), //Brown
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.LightBlue, colorLibrary), //LightBlue
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.LightMagenta, colorLibrary), //LightMagenta
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.LightCyan, colorLibrary), //LightCyan
-		ct.GetClosestColorRelative(diff, weight,
-			&referencePalette.HighWhite, colorLibrary).Lightened(monoLightOffsetPercent).Desaturated(monoSatOffsetPercent), //HighWhite
-		name+" - ",
-	)
-
 }
 
 type terminalPalette struct {
