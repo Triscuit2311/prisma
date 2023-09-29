@@ -27,60 +27,7 @@ type cHSL struct {
 	H, S, L float64
 }
 
-// cRGB represents a color in Red, Green, and Blue format. (uint8 [0-255])
-type cRGB struct {
-	R, G, B uint8
-}
-
-// ColorProfile represents a color with different color representations and an Alpha value.
-type ColorProfile struct {
-	HSL   cHSL
-	RGB   cRGB
-	Alpha float64
-	Name  string
-}
-
-func (color *ColorProfile) SetName(name string) {
-	color.Name = name
-}
-
-// NewColorProfileFromRGB creates a new ColorProfile from Red, Green, and Blue values.
-func NewColorProfileFromRGB(r, g, b uint8) ColorProfile {
-	rgb := cRGB{r, g, b}
-	return ColorProfile{
-		RGB:   rgb,
-		HSL:   rgb.ToHSL(),
-		Alpha: 1.0,
-	}
-}
-
-// NewColorProfileFromHSL creates a new ColorProfile from Hue, Saturation, and Lightness values.
-func NewColorProfileFromHSL(h, s, l float64) ColorProfile {
-	hsl := cHSL{h, s, l}
-	rgb := hsl.ToRGB()
-	return ColorProfile{
-		RGB:   rgb,
-		HSL:   hsl,
-		Alpha: 1.0,
-	}
-}
-
-func newColorProfileFromHSLObj(hsl cHSL) ColorProfile {
-	rgb := hsl.ToRGB()
-	return ColorProfile{
-		RGB:   rgb,
-		HSL:   hsl,
-		Alpha: 1.0,
-	}
-}
-
-func newColorProfileFromRGBObj(rgb cRGB) ColorProfile {
-	return ColorProfile{
-		RGB:   rgb,
-		HSL:   rgb.ToHSL(),
-		Alpha: 1.0,
-	}
-}
+/// HSL Methods
 
 // Pretty format [0-360°,0-100%,0-100%]
 func (hsl *cHSL) String() string {
@@ -88,78 +35,6 @@ func (hsl *cHSL) String() string {
 		positiveMod(int(hsl.H*360), 360),
 		positiveMod(int(hsl.S*100), 100),
 		positiveMod(int(hsl.L*100), 100))
-}
-
-// Pretty format [0-255,0-255,0-255]
-func (rgb *cRGB) String() string {
-	return fmt.Sprintf("cRGB(%d, %d, %d)", rgb.R, rgb.G, rgb.B)
-}
-
-// ToHSL converts RGB color representation to HSL.
-func (rgb *cRGB) ToHSL() cHSL {
-
-	// Get cRGB as % of max
-	nR := float64(rgb.R) / 255.0
-	nG := float64(rgb.G) / 255.0
-	nB := float64(rgb.B) / 255.0
-
-	minV := math.Min(nR, math.Min(nG, nB))
-	maxV := math.Max(nR, math.Max(nG, nB))
-	delta := maxV - minV
-
-	H, S, L := 0.0, 0.0, 0.0
-
-	// Calculate L
-	L = (maxV + minV) / 2.0
-
-	// Grayscale, B/W
-	if maxV == minV {
-		// No Hue/Sat
-		return cHSL{
-			0,
-			0,
-			L,
-		}
-	}
-
-	// Calculate S
-	if L < 0.5 {
-		S = delta / (maxV + minV)
-	} else {
-		S = delta / (2.0 - maxV - minV)
-	}
-
-	// Calculate H
-	switch {
-	case rgb.R >= rgb.B && rgb.R >= rgb.G:
-		if nG < nB {
-			delta += 6
-		}
-		H = (nG - nB) / delta
-	case rgb.G >= rgb.R && rgb.G >= rgb.B:
-		H = (nB-nR)/delta + 2
-	default:
-		H = (nR-nG)/delta + 4
-	}
-
-	H /= 6
-
-	return cHSL{H, S, L}
-}
-
-// AsHEXSTR returns the HEX string representation of an RGB color.
-func (rgb cRGB) AsHEXSTR() string {
-	return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
-}
-
-// AsArray returns the RGB color as an array of uint8.
-func (rgb cRGB) AsArray() [3]uint8 {
-	return [3]uint8{rgb.R, rgb.G, rgb.B}
-}
-
-// RGBfromArray creates an RGB color from an array of uint8.
-func RGBfromArray(arr [3]uint8) cRGB {
-	return cRGB{arr[0], arr[1], arr[2]}
 }
 
 // ToRGB converts HSL color representation to RGB.
@@ -226,6 +101,98 @@ func (hsl *cHSL) desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
 }
 
+// cRGB represents a color in Red, Green, and Blue format. (uint8 [0-255])
+type cRGB struct {
+	R, G, B uint8
+}
+
+/// RGB Methods
+
+// Pretty format [0-255,0-255,0-255]
+func (rgb *cRGB) String() string {
+	return fmt.Sprintf("cRGB(%d, %d, %d)", rgb.R, rgb.G, rgb.B)
+}
+
+// ToHSL converts RGB color representation to HSL.
+func (rgb *cRGB) ToHSL() cHSL {
+
+	// Get cRGB as % of max
+	nR := float64(rgb.R) / 255.0
+	nG := float64(rgb.G) / 255.0
+	nB := float64(rgb.B) / 255.0
+
+	minV := math.Min(nR, math.Min(nG, nB))
+	maxV := math.Max(nR, math.Max(nG, nB))
+	delta := maxV - minV
+
+	H, S, L := 0.0, 0.0, 0.0
+
+	// Calculate L
+	L = (maxV + minV) / 2.0
+
+	// Grayscale, B/W
+	if maxV == minV {
+		// No Hue/Sat
+		return cHSL{
+			0,
+			0,
+			L,
+		}
+	}
+
+	// Calculate S
+	if L < 0.5 {
+		S = delta / (maxV + minV)
+	} else {
+		S = delta / (2.0 - maxV - minV)
+	}
+
+	// Calculate H
+	switch {
+	case rgb.R >= rgb.B && rgb.R >= rgb.G:
+		if nG < nB {
+			delta += 6
+		}
+		H = (nG - nB) / delta
+	case rgb.G >= rgb.R && rgb.G >= rgb.B:
+		H = (nB-nR)/delta + 2
+	default:
+		H = (nR-nG)/delta + 4
+	}
+
+	H /= 6
+
+	return cHSL{H, S, L}
+}
+
+// AsHEXSTR returns the HEX string representation of an RGB color.
+func (rgb *cRGB) AsHEXSTR() string {
+	return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
+}
+
+// AsArray returns the RGB color as an array of uint8.
+func (rgb *cRGB) AsArray() [3]uint8 {
+	return [3]uint8{rgb.R, rgb.G, rgb.B}
+}
+
+// RGBfromArray creates an RGB color from an array of uint8.
+func RGBfromArray(arr [3]uint8) cRGB {
+	return cRGB{arr[0], arr[1], arr[2]}
+}
+
+// ColorProfile represents a color with different color representations and an Alpha value.
+type ColorProfile struct {
+	HSL   cHSL
+	RGB   cRGB
+	Alpha float64
+	Name  string
+}
+
+// ColorProfile Methods
+func (color *ColorProfile) SetName(name string) {
+	color.Name = name
+}
+
 // Lighten lightens the color by a specific percent.
 func (color ColorProfile) Lightened(percent int) ColorProfile {
 	col := color
@@ -257,6 +224,46 @@ func (color ColorProfile) Desaturated(percent int) ColorProfile {
 	col.RGB = col.HSL.ToRGB()
 	return col
 }
+
+// NewColorProfileFromRGB creates a new ColorProfile from Red, Green, and Blue values.
+func NewColorProfileFromRGB(r, g, b uint8) ColorProfile {
+	rgb := cRGB{r, g, b}
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   rgb.ToHSL(),
+		Alpha: 1.0,
+	}
+}
+
+// NewColorProfileFromHSL creates a new ColorProfile from Hue, Saturation, and Lightness values.
+func NewColorProfileFromHSL(h, s, l float64) ColorProfile {
+	hsl := cHSL{h, s, l}
+	rgb := hsl.ToRGB()
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   hsl,
+		Alpha: 1.0,
+	}
+}
+
+func newColorProfileFromHSLObj(hsl cHSL) ColorProfile {
+	rgb := hsl.ToRGB()
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   hsl,
+		Alpha: 1.0,
+	}
+}
+
+func newColorProfileFromRGBObj(rgb cRGB) ColorProfile {
+	return ColorProfile{
+		RGB:   rgb,
+		HSL:   rgb.ToHSL(),
+		Alpha: 1.0,
+	}
+}
+
+// Color Palette Functions
 
 // GetHarmonics generates harmonic colors from a base color.
 func GetHarmonics(color *ColorProfile, count int) []ColorProfile {
