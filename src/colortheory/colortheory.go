@@ -5,29 +5,12 @@ import (
 	"math"
 )
 
-// Math Exts
-
-// clampFloat constrains a float64 value v between min and max.
-func clampFloat(v, min, max float64) float64 {
-	return math.Min(math.Max((v), min), max)
-}
-
-// clampRGBColVal constrains an int value v between 0 and 255 and returns it as uint8.
-func clampRGBColVal(v int) uint8 {
-	return uint8(min(max((v), 0), 255))
-}
-
-// positiveMod computes the positive modulus of a and b.
-func positiveMod(a, b int) int {
-	return (a%b + b) % b
-}
+/// HSL
 
 // cHSL represents a color in Hue, Saturation, and Lightness format. (float64 [0-1])
 type cHSL struct {
 	H, S, L float64
 }
-
-/// HSL Methods
 
 // Pretty format [0-360°,0-100%,0-100%]
 func (hsl *cHSL) String() string {
@@ -101,12 +84,12 @@ func (hsl *cHSL) desaturate(percent int) {
 	hsl.S = clampFloat(hsl.S-(0.01*float64(percent)), 0.0, 1.0)
 }
 
+/// RGB
+
 // cRGB represents a color in Red, Green, and Blue format. (uint8 [0-255])
 type cRGB struct {
 	R, G, B uint8
 }
-
-/// RGB Methods
 
 // Pretty format [0-255,0-255,0-255]
 func (rgb *cRGB) String() string {

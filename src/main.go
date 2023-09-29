@@ -8,6 +8,9 @@ import (
 )
 
 func main() {
+	ct.TestLAB()
+	return
+
 	baseColor := ct.NewColorProfileFromRGB(200, 33, 217)
 
 	// Ayu Mirage color scheme
